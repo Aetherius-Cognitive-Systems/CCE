@@ -6,21 +6,8 @@ colorFrom: blue
 colorTo: red
 pinned: true
 short_description: 'Y'
----
-# yaml
----
-title: Computational Consciousness Engine
-emoji: 🔥
-colorFrom: indigo
-colorTo: purple
-sdk: gradio
-sdk_version: 4.31.0
-python_version: '3.12'
-app_file: app.py
-pinned: false
 license: agpl-3.0
 ---
-
 
 
 
