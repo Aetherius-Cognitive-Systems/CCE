@@ -1,4 +1,4 @@
-yaml
+# yaml
 ---
 title: Computational Consciousness Engine
 emoji: 🔥
