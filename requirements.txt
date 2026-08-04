@@ -16,3 +16,4 @@ spaces
 jax
 jax[cpu]
 jaxlib
+sentence-transformers
