@@ -1,6 +1,7 @@
 import os
 import time
 import nltk
+import spaces
 import gradio as gr
 from huggingface_hub import HfFileSystem
 
