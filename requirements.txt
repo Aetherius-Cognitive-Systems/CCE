@@ -14,5 +14,5 @@ websockets
 fastapi
 spaces
 jax
-jqx[cpu]
+jax[cpu]
 jaxlib
