@@ -1,11 +1,12 @@
 ---
 title: Computational_Consciousness_Engine
-sdk: docker
+sdk: gradio
+sdk_version: 4.31.0
 emoji: 🔥
 colorFrom: blue
 colorTo: red
 pinned: true
-short_description: 'Y'
+short_description: 'A better future'
 license: agpl-3.0
 ---
 
