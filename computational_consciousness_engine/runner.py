@@ -17,7 +17,7 @@ from computational_consciousness_engine.scale import QuantumScaleLadder
 from computational_consciousness_engine.math_formalization import CCMathFormalizer
 from computational_consciousness_engine.config import (
     DEFAULT_VECTOR_DIM, DEFAULT_STRAND_CAPACITY, CHAOS_POOL_SIZE,
-    DEFAULT_CONE_HEIGHT, DEFAULT_MAX_RADIUS, MUTATION_ATTRACTION_PROBABILITY,
+    DEFAULT_CONE_HEIGHT, DEFAULT_MAX_RADIUS, MUTATION_ATTRACTION_PROBABILITY, rng
 )
 
 
@@ -92,7 +92,7 @@ def run_simulation(num_generations: int = 8, steps_per_gen: int = 100):
 
             # Non-linear mutation attraction from chaos pool (Principle 5 & 37)
             # Only attempt attraction probabilistically to simulate traversal dynamics
-            if config.rng.random() < MUTATION_ATTRACTION_PROBABILITY:
+            if rng.random() < MUTATION_ATTRACTION_PROBABILITY:
                 candidate_mutation = balancer.emit_unattached_mutation()
                 attracted = mutator.attract_mutation(current_strand, candidate_mutation)
                 if not attracted:
