@@ -1,0 +1,15 @@
+gradio==4.31.0
+numpy>=1.26
+sympy>=1.12
+scipy>=1.11
+matplotlib>=3.8
+huggingface_hub<0.27.0
+astropy>=6.0
+mathesis>=0.3.0
+nltk
+regex
+tqdm
+uvicorn
+websockets
+fastapi
+spaces
