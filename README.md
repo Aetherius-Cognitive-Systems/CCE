@@ -1,3 +1,12 @@
+---
+title: Computational_Consciousness_Engine
+sdk: gradio
+emoji: 🔥
+colorFrom: blue
+colorTo: red
+pinned: true
+short_description: 'Y'
+---
 # yaml
 ---
 title: Computational Consciousness Engine
