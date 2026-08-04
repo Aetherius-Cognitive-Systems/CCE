@@ -1,7 +1,8 @@
 ---
 title: Computational_Consciousness_Engine
 sdk: gradio
-sdk_version: 4.31.0
+sdk_version: "4.31.0"
+app_file: app.py
 emoji: 🔥
 colorFrom: blue
 colorTo: red
