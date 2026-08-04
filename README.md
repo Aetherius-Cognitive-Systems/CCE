@@ -1,6 +1,6 @@
 ---
 title: Computational_Consciousness_Engine
-sdk: gradio
+sdk: docker
 emoji: 🔥
 colorFrom: blue
 colorTo: red
