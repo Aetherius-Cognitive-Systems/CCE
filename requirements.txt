@@ -13,3 +13,6 @@ uvicorn
 websockets
 fastapi
 spaces
+jax
+jqx[cpu]
+jaxlib
