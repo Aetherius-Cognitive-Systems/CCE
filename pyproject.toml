@@ -6,3 +6,6 @@ build-backend = "setuptools.build_meta"
 name = "computational_consciousness_engine"
 version = "1.0.0"
 description = "PMCA Simulation Engine"
+dependencies = [
+    "gradio==4.31.0",
+    ]
