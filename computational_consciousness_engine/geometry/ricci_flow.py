@@ -55,6 +55,40 @@ eps_floor = 1e-6  # numerical floor for diagonal positive-definiteness
 
 
 # ---------------------------------------------------------------------------
+# Eq. (12): Fisher Information Metric Construction
+# ---------------------------------------------------------------------------
+
+@jax.jit
+def compute_fisher_metric(mutations: jnp.ndarray, H: float = 1.0, eps: float = 1e-6) -> jnp.ndarray:
+    """
+    Eq. (12): F = (1 + H) * (I + (d * d^T) / (|d|^2 + eps))
+    Maps 1D integer mutations into 3D representation vectors 'd' to construct F.
+    """
+    # 1. Map scalar mutations to 3D phase-space vectors using cyclic trigonometric embedding
+    m = mutations.astype(jnp.float32)
+    d1 = jnp.sin(m)
+    d2 = jnp.cos(m)
+    d3 = jnp.sin(m * 0.5)
+    
+    # 2. Compute |d|^2
+    d_sq_norm = d1**2 + d2**2 + d3**2 + eps
+    
+    # 3. Compute outer product components (symmetric 3x3)
+    F11 = 1.0 + (d1 * d1) / d_sq_norm
+    F12 = (d1 * d2) / d_sq_norm
+    F13 = (d1 * d3) / d_sq_norm
+    F22 = 1.0 + (d2 * d2) / d_sq_norm
+    F23 = (d2 * d3) / d_sq_norm
+    F33 = 1.0 + (d3 * d3) / d_sq_norm
+    
+    # 4. Scale by (1 + H)
+    scale = 1.0 + H
+    fisher_6 = jnp.stack([F11, F12, F13, F22, F23, F33], axis=-1) * scale
+    return fisher_6
+
+
+
+# ---------------------------------------------------------------------------
 # Utilities (deduplicated -- kept once, identical to the original)
 # ---------------------------------------------------------------------------
 

@@ -16,9 +16,18 @@ class QuantumScaleLadder:
     2: Manifold
     3: Cosmic
     """
-    def __init__(self):
+    def __init__(self, base_dims: int = 3):
         self.scale_names = ["Particle", "Atomic", "Manifold", "Cosmic"]
         self.current_scale_index = 0
+        self.base_dims = base_dims
+        
+    @property
+    def active_dimensions(self) -> int:
+        """
+        Algebraic Expansion: Each scale literally adds a geometric dimension
+        to the tensor coordinate space (e.g. 3D -> 4D -> 5D).
+        """
+        return self.base_dims + self.current_scale_index
 
     def evaluate_scale_transition(self, fully_unfolded_manifold: Dict[str, Any], accumulated_mutations_count: int) -> Dict[str, Any]:
         """
@@ -37,13 +46,15 @@ class QuantumScaleLadder:
                 "previous_scale": previous_scale,
                 "new_scale": new_scale,
                 "scale_level": self.current_scale_index,
-                "message": f"Quantum scale-up from {previous_scale} to {new_scale}."
+                "active_dimensions": self.active_dimensions,
+                "message": f"Quantum scale-up from {previous_scale} to {new_scale}. Dimensions algebraically expanded to {self.active_dimensions}D."
             }
             
         return {
             "scaled_up": False,
             "current_scale": self.scale_names[self.current_scale_index],
-            "scale_level": self.current_scale_index
+            "scale_level": self.current_scale_index,
+            "active_dimensions": self.active_dimensions
         }
 
     def detect_linear_collapse_misperception(self, traversal_path: List[int]) -> Dict[str, Any]:

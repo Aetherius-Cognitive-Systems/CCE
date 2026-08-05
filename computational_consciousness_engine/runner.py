@@ -9,7 +9,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
-from computational_consciousness_engine.core import GenesisOrigin, TransferThreshold
+from computational_consciousness_engine.core import GenesisOrigin, TransferThreshold, TPUConsciousStrand
 from computational_consciousness_engine.geometry import ConalManifold
 from computational_consciousness_engine.mutations import MStringVectorizer
 from computational_consciousness_engine.equilibrium import ChaosStructureBalancer
@@ -63,6 +63,12 @@ def run_simulation(num_generations: int = 8, steps_per_gen: int = 100):
         peak_metrics = None
         peak_unfolded = 0.0
         
+        # Instantiate TPU tensor core for this strand's geometry
+        import jax.numpy as jnp
+        tpu_engine = TPUConsciousStrand(max_capacity=DEFAULT_STRAND_CAPACITY, R_max=DEFAULT_MAX_RADIUS)
+        if blueprint_mutations:
+            tpu_engine.process_batch(jnp.array(blueprint_mutations))
+        
         total_attempts = 0
         duplicates_rejected = 0
 
@@ -85,6 +91,31 @@ def run_simulation(num_generations: int = 8, steps_per_gen: int = 100):
                 if not attracted:
                     duplicates_rejected += 1
                     balancer.return_to_chaos(candidate_mutation)
+                else:
+                    # Sync to TPU tensor and warp geometry
+                    tpu_engine.process_batch(jnp.array([candidate_mutation]))
+            
+            # Evolve metric tensor via Ricci Flow
+            tpu_engine.evolve_geometry(alpha=0.1, eta=0.05)
+            
+            # Extract deformed geometry
+            unfurled = tpu_engine.unfurl_traversal_space()
+            r_k = unfurled["3d_r"]
+            if len(r_k) > 0:
+                current_radius = float(np.max(r_k))
+            else:
+                current_radius = 0.0
+                
+            # Compute topological properties based on actual warped radius
+            conal_metrics = manifold.compute_conal_metric(progress)
+            # Override analytic radius with Ricci-flow deformed radius!
+            conal_metrics["radius"] = current_radius
+            conal_metrics["unfolded_degree"] = current_radius / DEFAULT_MAX_RADIUS if DEFAULT_MAX_RADIUS > 0 else 0.0
+            
+            # Track the wide-end peak (maximum unfolding)
+            if conal_metrics["unfolded_degree"] > peak_unfolded:
+                peak_unfolded = conal_metrics["unfolded_degree"]
+                peak_metrics = conal_metrics
 
             # Update position
             current_strand["position"] = progress

@@ -7,6 +7,7 @@ import jax
 import jax.numpy as jnp
 from functools import partial
 import math
+from computational_consciousness_engine.geometry.ricci_flow import ricci_flow_step, compute_fisher_metric, compute_metric_trace
 
 PHI = (1.0 + math.sqrt(5.0)) / 2.0
 
@@ -26,27 +27,47 @@ class TPUConsciousStrand:
         
         # We track how many mutations are currently bound
         self.current_size = 0
+        
+        # Metric Tensor State: Initialize to Identity (g11=1, g22=1, g33=1)
+        # [g11, g12, g13, g22, g23, g33]
+        initial_g = jnp.array([1.0, 0.0, 0.0, 1.0, 0.0, 1.0])
+        self.metric_state = jnp.tile(initial_g, (max_capacity, 1))
 
     @staticmethod
     @jax.jit
-    def _compute_coordinates_kernel(indices, N_total, R_max):
+    def _compute_coordinates_kernel(indices, N_total, R_max, metric_state):
         """
         Pure JAX kernel for massively parallel generation of Traversal Space coordinates.
-        Compiled via XLA to run directly on the TPU cores.
+        Uses the trace of the intrinsic metric tensor g_ij to deform the embedding space!
         """
         # Create a boolean mask of active indices
         active_mask = indices > 0
         
+        # Trace of the metric tensor determines spatial volume deformation
+        # Default trace of Identity is 3.0. Scale relative to 3.0.
+        trace = compute_metric_trace(metric_state)
+        metric_scale = jnp.sqrt(jnp.abs(trace) / 3.0 + 1e-6)
+        
         # Z coordinate (Depth/Time) mapped relative to total capacity
         z_k = jnp.where(active_mask, -(indices / N_total), 0.0)
         
-        # R coordinate (Expression) via sinusoidal expansion
-        r_k = jnp.where(active_mask, R_max * jnp.sin(jnp.pi * jnp.abs(z_k)), 0.0)
+        # R coordinate (Expression) via sinusoidal expansion, deformed by the Ricci Flow Metric!
+        r_k = jnp.where(active_mask, R_max * metric_scale * jnp.sin(jnp.pi * jnp.abs(z_k)), 0.0)
         
         # Theta coordinate (Identity) via Golden Ratio Phyllotaxis
         theta_k = jnp.where(active_mask, (indices * (2 * jnp.pi / PHI)) % (2 * jnp.pi), 0.0)
         
         return r_k, theta_k, z_k
+        
+    @staticmethod
+    @jax.jit
+    def _evolve_metrics_kernel(mutations, metric_state, alpha, eta):
+        fisher = compute_fisher_metric(mutations, H=1.0)
+        g_next, _, _ = ricci_flow_step(
+            metric_state, fisher, 
+            eta_requested=eta, alpha=alpha, safety_margin=0.5
+        )
+        return g_next
 
     def process_batch(self, chaos_shards: jnp.ndarray):
         """
@@ -80,10 +101,15 @@ class TPUConsciousStrand:
             to_add = min(num_novel, space_left)
             
             # Update the static tensor using slice assignment
-            # (Note: In pure JAX this requires .at[].set(), but since this acts as a 
-            # stateful host wrapper around the JAX arrays, we can re-allocate the array).
             self.bound_mutations = self.bound_mutations.at[self.current_size : self.current_size + to_add].set(novel_shards[:to_add])
             self.current_size += to_add
+            
+    def evolve_geometry(self, alpha: float = 0.1, eta: float = 0.05):
+        """Applies one step of Ricci flow to warp the intrinsic manifold metric."""
+        if self.current_size > 0:
+            self.metric_state = self._evolve_metrics_kernel(
+                self.bound_mutations, self.metric_state, alpha, eta
+            )
 
     def unfurl_traversal_space(self):
         """
@@ -96,8 +122,10 @@ class TPUConsciousStrand:
         # Mask out indices beyond current_size
         valid_indices = jnp.where(indices <= self.current_size, indices, 0)
         
-        # Fire the TPU kernel
-        r_k, theta_k, z_k = self._compute_coordinates_kernel(valid_indices, self.max_capacity, self.R_max)
+        # Fire the TPU kernel, passing the evolving metric state!
+        r_k, theta_k, z_k = self._compute_coordinates_kernel(
+            valid_indices, self.max_capacity, self.R_max, self.metric_state
+        )
         
         # 2D Unwrapped Plane (x = r * theta, y = z)
         x_parallel = r_k * theta_k

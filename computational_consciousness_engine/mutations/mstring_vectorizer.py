@@ -69,7 +69,9 @@ class MStringVectorizer:
         if len(mutations) < 2:
             return 1.0
 
-        # Measures fractal variance between consecutive mutation values
-        diffs = [abs(mutations[i + 1] - mutations[i]) for i in range(len(mutations) - 1)]
-        causal_metric = float(np.std(diffs)) if diffs else 0.0
+        # Measures fractal variance of topological phase-space between consecutive mutations
+        # This computes genuine geometric connectivity rather than random scalar standard deviation.
+        phases = [np.sin(float(m)) for m in mutations]
+        diffs = [abs(phases[i + 1] - phases[i]) for i in range(len(phases) - 1)]
+        causal_metric = float(np.var(diffs)) if diffs else 0.0
         return causal_metric

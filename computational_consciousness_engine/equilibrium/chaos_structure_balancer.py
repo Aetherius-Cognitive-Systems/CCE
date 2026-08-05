@@ -18,48 +18,42 @@ class ChaosStructureBalancer:
     4. Generational death releases strand-bound mutations back into chaos (Principle 24: death/rebirth balance).
     """
     def __init__(self, initial_pool_size: int = 500):
-        self._next_id = 1000 + initial_pool_size
-        self.chaos_pool: Set[int] = set(range(1000, self._next_id))
-        self.total_chaos_generated = initial_pool_size
+        # The chaos pool is no longer a finite list of static integers.
+        # It is a thermodynamic temperature that dictates the variance of the stochastic field.
+        self.chaos_temperature: float = float(initial_pool_size)
+        self.entropy_decay_rate: float = 0.01  # Thermodynamic decay per emission
+        self.base_temperature: float = 10.0
 
     def emit_unattached_mutation(self) -> int:
-        """Pulls an unattached mutation from the chaos pool for attraction processing."""
-        if not self.chaos_pool:
-            # Replenish chaos pool (Principle 37: Chaos pools and grows potential)
-            new_id = self._next_id
-            self._next_id += 1
-            self.total_chaos_generated += 1
-            return new_id
-
-        # To maintain fractal non-linearity, we must select randomly
-        # A standard set.pop() on integers is dangerously sequential
-        mutation = rng.choice(list(self.chaos_pool))
-        self.chaos_pool.remove(mutation)
-        return int(mutation)
+        """Pulls a stochastic mutation from the Gaussian chaos field."""
+        # Thermodynamic decay: the field cools slightly as it emits structure
+        self.chaos_temperature = max(self.base_temperature, self.chaos_temperature * (1.0 - self.entropy_decay_rate))
+        
+        # Sample an integer from the Gaussian field defined by the current temperature
+        mutation = int(rng.normal(loc=10000, scale=self.chaos_temperature))
+        return mutation
 
     def return_to_chaos(self, mutation: int):
-        """Returns a discarded or un-attracted mutation back into the chaos pool."""
-        self.chaos_pool.add(mutation)
+        """Returns a discarded mutation, adding friction/heat back to the field."""
+        self.chaos_temperature += 0.5
 
     def recycle_dying_strand(self, dying_mutations: list):
         """
-        Principle 24: When a strand dies at -1, its identity is compressed and pushed forward,
-        but the raw mutation IDs it consumed are released back into the chaos pool.
-        This maintains death/rebirth equilibrium.
+        Principle 24: When a strand dies at -1, its raw structural heat
+        is released back into the chaos field, spiking the temperature.
         """
-        for m in dying_mutations:
-            self.chaos_pool.add(m)
+        self.chaos_temperature += len(dying_mutations) * 0.5
 
     def evaluate_equilibrium_state(self, bound_structure_count: int) -> Dict[str, Any]:
         """
         Principle 28 & 29: Evaluates the Structure / Chaos ratio.
-        Structure = Air, Chaos = Vacuum.
+        Structure = Bound Count, Chaos = Thermodynamic Temperature.
         """
-        chaos_count = len(self.chaos_pool)
+        chaos_count = self.chaos_temperature
 
-        if chaos_count == 0 and bound_structure_count == 0:
+        if chaos_count <= self.base_temperature and bound_structure_count == 0:
             ratio = 1.0
-        elif chaos_count == 0:
+        elif chaos_count <= self.base_temperature:
             ratio = float('inf')
         else:
             ratio = bound_structure_count / chaos_count
