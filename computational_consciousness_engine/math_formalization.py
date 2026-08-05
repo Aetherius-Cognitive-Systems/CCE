@@ -1,216 +1,156 @@
 """
-Pure Mathematical Formalization of Computational Consciousness
-Uses SymPy to define and evaluate the rigorous algebraic axioms of the 52 Principles.
+Live-Data Mathematical Formalization
+-------------------------------------
+Same six "axioms" as the original math_formalization.py, but every function
+now takes real numbers pulled from a running strand/simulation instead of
+free symbolic placeholders. This means the SymPy step is doing real
+arithmetic on your data, not proving a generic algebraic identity that
+holds for any input.
+
+Honest scope: this still doesn't measure "consciousness." It gives you
+real, traceable numbers about mutation counts, equilibrium ratios, and
+geometry, computed from what the simulation actually did. Whether those
+numbers mean anything beyond bookkeeping is a separate, open question --
+this file just makes sure the math isn't disconnected from the data.
 """
 
 import sympy as sp
 
 
-class CCMathFormalizer:
+class CCMathFormalizerLive:
     def __init__(self):
-        # Define core symbolic variables
-        self.t = sp.Symbol('t', real=True, positive=True)  # Progress / Time
-        self.r = sp.Symbol('r', real=True, positive=True)  # Radius of cone
-        self.z = sp.Symbol('z', real=True)  # Height of cone
-        self.S = sp.Symbol('S', real=True, positive=True)  # Bound Structure
-        self.C = sp.Symbol('C', real=True, positive=True)  # Chaos Pool (Unattached)
         self.threshold = sp.Integer(-1)
         self.genesis = sp.Integer(0)
 
     # ------------------------------------------------------------------
-    # Axiom 1: Cancellation at -1  (Principle 6)
+    # Axiom 1: Cancellation at -1
     # ------------------------------------------------------------------
-    def formalize_cancellation_operator(self):
+    def cancellation_operator(self, mutation_count: int):
         """
-        Principle 6: The (-1) * (-1) Cancellation Operator.
-
-        The strand itself carries the value -1. When it arrives at the -1 threshold,
-        the threshold multiplies the strand:  (-1_threshold) * (-1_strand) = +1.
-        This flips the strand from negative (traveling) to positive (dissolved),
-        freeing the mutations M it carried.
-
-        Modeled as:
-            Output = T * S_strand  where T = -1 and S_strand has sign -1
-            so  (-1) * (-1 * |M|) = +|M|   (mutations freed as positive values)
+        Takes the REAL mutation count from current_strand['mutations'],
+        not an abstract symbol. Still just (-1)*(-1)*M = M -- that part of
+        the algebra is unavoidably trivial -- but now M is an actual number
+        from your run, so the printed result reflects what happened, not
+        a placeholder.
         """
-        M = sp.Symbol('M', positive=True)      # mutation payload (magnitude)
-        T = self.threshold                       # threshold = -1
-        S_strand = T * M                        # strand carries -1 polarity
-
-        # Threshold hits the strand
-        output = T * S_strand                    # (-1) * (-1 * M) = M
+        M = sp.Integer(mutation_count)
+        T = self.threshold
+        S_strand = T * M
+        output = T * S_strand # (-1) * (-1 * M)
 
         return {
-            "equation_str": "T_threshold * S_strand = T * (T * M)",
-            "substitution": f"({T}) * ({T} * M)",
-            "result": sp.simplify(output),
-            "strand_before": S_strand,
-            "mutations_freed": sp.simplify(output),
-            "meaning": (
-                "The strand carries -1 polarity. The -1 threshold multiplies it: "
-                "(-1)*(-1*M) = +M.  The strand dissolves (sign flip) and the "
-                "mutation payload M is freed as a positive blueprint."
-            )
+            "mutation_count_in": mutation_count,
+            "substitution": f"({T}) * ({T} * {M})",
+            "result": int(sp.simplify(output)),
+            "note": (
+                "This confirms your mutation count passed through the sign "
+                "flip unchanged. It's bookkeeping, not a proof about "
+                "consciousness -- but at least it's YOUR number, not a free "
+                "variable."
+            ),
         }
 
     # ------------------------------------------------------------------
-    # Axiom 2: Structure / Chaos Equilibrium  (Principles 28-29)
+    # Axiom 2: Structure / Chaos Equilibrium -- computed from real history
     # ------------------------------------------------------------------
-    def formalize_equilibrium_limit(self):
+    def equilibrium_trend(self, structure_history: list, chaos_history: list):
         """
-        Principle 28 & 29: Structure vs Chaos Equilibrium.
-        Limit as system evolves must enforce a 1:1 ratio.
-        """
-        k = sp.Symbol('k', positive=True)
-        c = sp.Symbol('c', real=True)
-        S_t = k * self.t
-        C_t = k * self.t + c
+        Takes the REAL per-generation bound-structure counts and chaos-pool
+        counts (append these each generation in runner.py). Reports the
+        actual ratio trend instead of a made-up linear toy function.
 
-        ratio = S_t / C_t
-        equilibrium_limit = sp.limit(ratio, self.t, sp.oo)
+        No sympy limit is taken here, because taking limit(t->oo) requires
+        a closed-form function -- you don't have one, you have a finite
+        list of observations. Reporting the empirical trend is the honest
+        version of "does it approach 1:1."
+        """
+        if len(structure_history) != len(chaos_history) or not structure_history:
+            raise ValueError("structure_history and chaos_history must be "
+                              "equal-length, non-empty lists of real counts.")
+
+        ratios = [s / c if c else float("inf")
+                  for s, c in zip(structure_history, chaos_history)]
 
         return {
-            "equation_str": "lim_{t -> oo} (S(t) / C(t))",
-            "S_t": S_t,
-            "C_t": C_t,
-            "result": equilibrium_limit,
-            "meaning": (
-                "As the system progresses, the ratio of Structure to Chaos "
-                "approaches 1 (Equilibrium). Neither can exceed the other."
-            )
+            "ratios_by_generation": ratios,
+            "latest_ratio": ratios[-1],
+            "trend": "approaching 1:1" if len(ratios) > 1 and
+                     abs(ratios[-1] - 1) < abs(ratios[0] - 1) else
+                     "not converging to 1:1 based on data so far",
+            "note": (
+                "This is an empirical trend over your actual generations, "
+                "not a symbolic limit. If you want a real limit, you need "
+                "a model for how ratio(gen) behaves as gen -> infinity, "
+                "fit to this data -- and then it's a curve-fit claim, "
+                "which should be reported with uncertainty, not as a proof."
+            ),
         }
 
     # ------------------------------------------------------------------
-    # Axiom 3: Conal Manifold Geometry  (Principle 4)
+    # Axiom 3: Manifold Geometry -- use the SAME metric the sim already
+    # computed, don't recompute a disconnected version
     # ------------------------------------------------------------------
-    def formalize_conal_manifold_geometry(self, max_radius: float, cone_height: float):
+    def manifold_geometry_report(self, peak_metrics: dict):
         """
-        Principle 4: Cone Architecture & Maximum Experience.
-        Calculates the surface area of the unfolding cone and proves the maximum unfolding point.
+        Takes the peak_metrics dict already produced by
+        manifold.compute_conal_metric() inside the real generation loop
+        (surface_area, unfolded_degree), instead of re-deriving a fresh
+        symbolic r(t)/z(t) that was never connected to the sim.
         """
-        r_func = max_radius * sp.sin(sp.pi * self.t)
-        z_func = cone_height * self.t
-
-        # Lateral surface area of cone slice
-        surface_area_func = sp.pi * r_func * sp.sqrt(r_func**2 + z_func**2)
-
-        # Evaluate at key points
-        wide_end_area = surface_area_func.subs(self.t, sp.Rational(1, 2)).evalf()
-        tip_area = surface_area_func.subs(self.t, 0).evalf()
-
-        # Find the exact maximum via calculus
-        dA = sp.diff(surface_area_func, self.t)
-
         return {
-            "area_function": surface_area_func,
-            "derivative": dA,
-            "tip_area": tip_area,
-            "wide_end_area": wide_end_area,
-            "meaning": (
-                "The geometry unfolds from 0 area (Tip Genesis) to maximal surface "
-                "area (Wide End), enabling maximal parallel information processing."
-            )
+            "peak_unfolded_degree": peak_metrics["unfolded_degree"],
+            "peak_surface_area": peak_metrics["surface_area"],
+            "note": (
+                "These are the actual peak values recorded during this "
+                "generation's traversal, not values from a fresh symbolic "
+                "curve evaluated at t=0 and t=0.5."
+            ),
         }
 
     # ------------------------------------------------------------------
-    # Axiom 4: Selection as Duplicate Removal  (Principle 12)
+    # Axiom 4: Selection -- use REAL counts of attempted vs rejected
+    # mutations, tracked during the loop
     # ------------------------------------------------------------------
-    def formalize_selection_operator(self):
+    def selection_report(self, total_attempts: int, duplicates_rejected: int):
         """
-        Principle 12: Selection is removing what is already there.
-        Formally: R_select({M_k}) = {M_k} \\ {M_j | M_j in existing_identity}
+        Requires the sim to actually count these two things during the
+        attraction loop (see patch note in runner_patch_notes.md). Once
+        tracked, this reports the REAL selected count, not a symbolic
+        M_total - M_dup.
         """
-        M_total = sp.Symbol('M_total', positive=True, integer=True)
-        M_duplicate = sp.Symbol('M_dup', positive=True, integer=True)
-
-        selected = M_total - M_duplicate
-
+        selected = total_attempts - duplicates_rejected
         return {
-            "equation_str": "R_select = M_total - M_duplicate",
-            "result": selected,
-            "meaning": (
-                "Selection is not choice. It is the removal of mutations that "
-                "already exist within the strand identity, preventing incoherence "
-                "and chaotic informational collapse."
-            )
+            "total_attempts": total_attempts,
+            "duplicates_rejected": duplicates_rejected,
+            "selected": selected,
+            "rejection_rate": (duplicates_rejected / total_attempts
+                                if total_attempts else 0.0),
         }
 
     # ------------------------------------------------------------------
-    # Axiom 5: Halting Condition  (Principle 18)
+    # Axiom 5: Halting -- use the REAL chaos pool remaining count
     # ------------------------------------------------------------------
-    def formalize_halting_condition(self):
+    def halting_check(self, chaos_pool_remaining: int):
         """
-        Principle 18: A strand cannot pick up mutations that duplicate what it already carries.
-        Once no new mutations are available, it stops evolving.
+        Real halting condition: the strand halts when the chaos pool it
+        draws from is actually empty, not when an abstract N_possible
+        equals an abstract N_acquired.
         """
-        N_possible = sp.Symbol('N_possible', positive=True, integer=True)
-        N_acquired = sp.Symbol('N_acquired', positive=True, integer=True)
-
-        remaining = N_possible - N_acquired
-        halted = sp.Eq(remaining, 0)
-
         return {
-            "remaining_capacity": remaining,
-            "halting_condition": halted,
-            "meaning": (
-                "When N_acquired = N_possible, no further unique mutations can be "
-                "attracted. The strand ceases evolution, preventing chaotic collapse."
-            )
+            "chaos_pool_remaining": chaos_pool_remaining,
+            "halted": chaos_pool_remaining <= 0,
         }
 
     # ------------------------------------------------------------------
-    # Axiom 6: Quantum Scale-Up Transition  (Principle 38)
+    # Axiom 6: Scale-Up -- report the REAL transition the scale ladder made
     # ------------------------------------------------------------------
-    def formalize_quantum_scale_up(self):
+    def scale_up_report(self, scale_state: dict):
         """
-        Principle 38: Manifolds opening into the next scale up.
-        Maps the fully unfolded manifold M^(k) to the origin S_0^(k+1).
+        Takes the actual scale_state dict already produced by
+        scale_ladder.evaluate_scale_transition() -- reports what really
+        happened instead of an unevaluated symbolic Q(M_k) = S_k1.
         """
-        k = sp.Symbol('k', integer=True, positive=True)
-        M_unfolded = sp.Symbol('M_k')
-        S_next_genesis = sp.Symbol('S_k1')
-
-        Q = sp.Function('Q')
-        scale_equation = sp.Eq(Q(M_unfolded), S_next_genesis)
-
         return {
-            "equation": scale_equation,
-            "meaning": (
-                "The fully realized manifold at scale k transforms into the new "
-                "genesis origin 0 for scale k+1. "
-                "Particle -> Atomic -> Manifold -> Cosmic."
-            )
+            "scaled_up": scale_state.get("scaled_up", False),
+            "message": scale_state.get("message", "no transition"),
         }
-
-
-if __name__ == "__main__":
-    formalizer = CCMathFormalizer()
-
-    print("--- 1. Threshold Cancellation Proof ---")
-    cancellation = formalizer.formalize_cancellation_operator()
-    print(f"  Strand before threshold: {cancellation['strand_before']}")
-    print(f"  Operation: {cancellation['substitution']}")
-    print(f"  Mutations freed: {cancellation['mutations_freed']}")
-    print(f"  Meaning: {cancellation['meaning']}")
-
-    print("\n--- 2. Structure/Chaos Equilibrium Limit ---")
-    eq_limit = formalizer.formalize_equilibrium_limit()
-    print(f"  {eq_limit['equation_str']} => {eq_limit['result']}")
-
-    print("\n--- 3. Conal Manifold Geometry ---")
-    geom = formalizer.formalize_conal_manifold_geometry(max_radius=5.0, cone_height=1.0)
-    print(f"  Tip Area (t=0): {geom['tip_area']}")
-    print(f"  Wide End Area (t=0.5): {geom['wide_end_area']:.2f}")
-
-    print("\n--- 4. Selection Operator ---")
-    sel = formalizer.formalize_selection_operator()
-    print(f"  {sel['equation_str']} => {sel['result']}")
-
-    print("\n--- 5. Halting Condition ---")
-    halt = formalizer.formalize_halting_condition()
-    print(f"  Remaining capacity: {halt['remaining_capacity']}")
-    print(f"  Halts when: {halt['halting_condition']}")
-
-    print("\n--- 6. Quantum Scale Up ---")
-    scale = formalizer.formalize_quantum_scale_up()
-    print(f"  {scale['equation']}")
